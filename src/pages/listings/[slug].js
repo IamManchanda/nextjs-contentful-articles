@@ -1,9 +1,10 @@
 import Head from "next/head";
+import Image from "next/image";
 import { gql } from "graphql-request";
 import graphQLClient from "../../utils/graph-ql-client";
 import styles from "../../assets/styles/Home.module.css";
 
-function PageListingsSlug() {
+function PageListingsSlug({ listing }) {
   return (
     <div className={styles.container}>
       <Head>
@@ -12,8 +13,25 @@ function PageListingsSlug() {
       </Head>
 
       <main className={styles.main}>
-        <h1 className={styles.title}>BNB Listings</h1>
-        <p className={styles.description}>Listing: </p>
+        <h1 className={styles.title}>{listing.title}</h1>
+        <div className={styles.grid}>
+          {listing.photosCollection.items.map((photo) => (
+            <div key={photo.sys.id}>
+              <p>{photo.title}</p>
+              <Image
+                className={styles.card}
+                src={photo.url}
+                alt={photo.title}
+                title={photo.title}
+                width={photo.width}
+                height={photo.height}
+              />
+              <br />
+              <br />
+              <hr />
+            </div>
+          ))}
+        </div>
       </main>
     </div>
   );
@@ -43,22 +61,37 @@ export async function getStaticPaths() {
   };
 }
 
-export async function getStaticProps() {
+export async function getStaticProps({ params }) {
   const data = await graphQLClient.request(
     gql`
-      query GetBnbCollection {
-        bnbCollection {
+      query GetBnbCollection($slug: String!) {
+        bnbCollection(where: { slug: $slug }) {
           items {
             title
-            slug
+            photosCollection {
+              items {
+                sys {
+                  id
+                }
+                title
+                url
+                width
+                height
+              }
+            }
           }
         }
       }
     `,
+    {
+      slug: params.slug,
+    },
   );
 
   return {
-    props: {},
+    props: {
+      listing: data.bnbCollection.items[0],
+    },
     revalidate: 3,
   };
 }
